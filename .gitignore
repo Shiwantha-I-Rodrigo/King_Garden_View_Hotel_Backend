@@ -1,3 +1,5 @@
 /env
+/KVGHBE/KVGH_API/_pycache_
+/KVGHBE/KVGH_API/migrations
 *.pyc
 *.sqlite3

@@ -14,9 +14,12 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
+
 from django.urls import path
+from KVGH_API import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('', views.get_home, name='get_home'),
+    path('room/add/', views.add_room, name='add_room'),
+    path('room/get/<int:id>/', views.get_room, name='get_room'),
 ]
