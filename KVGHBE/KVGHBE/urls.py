@@ -19,7 +19,8 @@ from django.urls import path
 from KVGH_API import views
 
 urlpatterns = [
-    path('', views.get_home, name='get_home'),
-    path('room/add/', views.add_room, name='add_room'),
-    path('room/get/<int:id>/', views.get_room, name='get_room'),
+    path('hotel/create/', views.hotel_create, name='hotel_create'),
+    path('hotel/read/<int:req_id>/', views.hotel_read, name='hotel_read'),
+    path('hotel/delete/', views.hotel_delete, name='hotel_delete'),
+    path('hotel/update/', views.hotel_update, name='hotel_update'),
 ]
