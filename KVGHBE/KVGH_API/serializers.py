@@ -13,7 +13,7 @@ class Hotel_Serializer(serializers.ModelSerializer):
 
 
 class Room_Type_Serializer(serializers.ModelSerializer):
-    hotel_id = Hotel_Serializer()
+    #hotel_id = Hotel_Serializer()
     class Meta:
         model = Room_Type
         fields = ('type_id', 
@@ -30,8 +30,8 @@ class Room_Type_Serializer(serializers.ModelSerializer):
 
 
 class Room_Serializer(serializers.ModelSerializer):
-    hotel_id = Hotel_Serializer()
-    type_id = Room_Type_Serializer()
+    #hotel_id = Hotel_Serializer()
+    #type_id = Room_Type_Serializer()
     class Meta:
         model = Room
         fields = ('room_id', 
@@ -45,17 +45,16 @@ class User_Role_Serializer(serializers.ModelSerializer):
     class Meta:
         model = User_Role
         fields = ('role_id', 
-                  'role_name' 
-                  'role_validator',) 
+                  'role_name', 
+                  'role_token',) 
 
 
 class User_Serializer(serializers.ModelSerializer):
-    role_id = User_Role_Serializer()
+    #role_id = User_Role_Serializer()
     class Meta:
         model = User
-        fields = ('user_id', 
-                  'role_id'
-                  'user_name', 
+        fields = ('user_name', 
+                  'role_id', 
                   'user_pass', 
                   'user_first_name', 
                   'user_last_name', 
@@ -64,7 +63,8 @@ class User_Serializer(serializers.ModelSerializer):
                   'user_address', 
                   'user_telephone', 
                   'user_email', 
-                  'user_discount')
+                  'user_discount',
+                  'user_token')
 
 
 class Customer_Serializer(serializers.ModelSerializer):
@@ -81,14 +81,14 @@ class Customer_Serializer(serializers.ModelSerializer):
 
 
 class Reservation_Serializer(serializers.ModelSerializer):
-    user_id = User_Serializer()
-    room_id = Room_Serializer()
-    customer_id = Customer_Serializer()
+    #user_name = User_Serializer()
+    #room_id = Room_Serializer()
+    #customer_id = Customer_Serializer()
     class Meta:
         model = Reservation
         fields = ('res_id', 
                   'customer_id'
-                  'user_id', 
+                  'user_name', 
                   'room_id', 
                   'res_date', 
                   'res_mod_date', 

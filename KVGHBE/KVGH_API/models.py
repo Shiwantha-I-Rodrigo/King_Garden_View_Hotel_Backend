@@ -37,7 +37,7 @@ class Room(models.Model):
 class User_Role(models.Model):
     role_id = models.BigAutoField(primary_key=True)
     role_name = models.CharField(max_length=128)
-    role_validator = models.CharField(max_length=256)
+    role_token = models.CharField(max_length=256, default="none")
 
 
 class User(models.Model):
@@ -46,10 +46,9 @@ class User(models.Model):
         ("F","Female"),
     ]
     phone_regex = RegexValidator(regex='^\+?1?\d{9,15}$', message="invalid phone number")
-    user_id = models.BigAutoField(primary_key=True)
+    user_name = models.CharField(max_length=128, primary_key=True)
     role_id = models.ForeignKey(User_Role, on_delete=models.PROTECT)
-    user_name = models.CharField(max_length=128, unique=True)
-    user_pass = models.CharField(max_length=256)
+    user_pass = models.BinaryField()
     user_first_name = models.CharField(max_length=128)
     user_last_name = models.CharField(max_length=128)
     user_dob = models.DateField()
@@ -58,6 +57,7 @@ class User(models.Model):
     user_telephone = models.CharField(max_length=15, validators=[phone_regex], blank=True)
     user_email = models.EmailField()
     user_discount = models.DecimalField(max_digits=2, decimal_places=2)
+    user_token = models.CharField(max_length=256, default="none")
 
 
 class Customer(models.Model):
@@ -79,7 +79,7 @@ class Customer(models.Model):
 class Reservation(models.Model):
     res_id = models.BigAutoField(primary_key=True)
     customer_id = models.ForeignKey(Customer, on_delete=models.PROTECT)
-    user_id = models.ForeignKey(User, on_delete=models.PROTECT)
+    user_name = models.ForeignKey(User, on_delete=models.PROTECT)
     room_id = models.ForeignKey(Room, on_delete=models.PROTECT)
     res_date = models.DateTimeField(auto_now_add=True)
     res_mod_date = models.DateTimeField(auto_now=True)
