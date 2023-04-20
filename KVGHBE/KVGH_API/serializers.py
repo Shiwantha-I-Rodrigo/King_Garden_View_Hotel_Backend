@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hotel, Room_Type, Room, User_Role, User, Customer, Reservation
+from .models import Hotel, Room_Type, Room, User_Role, User, Customer, Reservation, Session
 
 
 class Hotel_Serializer(serializers.ModelSerializer):
@@ -63,8 +63,7 @@ class User_Serializer(serializers.ModelSerializer):
                   'user_address', 
                   'user_telephone', 
                   'user_email', 
-                  'user_discount',
-                  'user_token')
+                  'user_discount',)
 
 
 class Customer_Serializer(serializers.ModelSerializer):
@@ -103,3 +102,11 @@ class Reservation_Serializer(serializers.ModelSerializer):
                   'res_lunch', 
                   'res_dinner', 
                   'res_paid',)
+
+
+class Session_Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = Session
+        fields = ('session_id', 
+                  'session_key', 
+                  'session_nonce',) 

@@ -37,7 +37,7 @@ class Room(models.Model):
 class User_Role(models.Model):
     role_id = models.BigAutoField(primary_key=True)
     role_name = models.CharField(max_length=128)
-    role_token = models.CharField(max_length=256, default="none")
+    role_token = models.CharField(max_length=256)
 
 
 class User(models.Model):
@@ -57,7 +57,6 @@ class User(models.Model):
     user_telephone = models.CharField(max_length=15, validators=[phone_regex], blank=True)
     user_email = models.EmailField()
     user_discount = models.DecimalField(max_digits=2, decimal_places=2)
-    user_token = models.CharField(max_length=256, default="none")
 
 
 class Customer(models.Model):
@@ -95,3 +94,9 @@ class Reservation(models.Model):
     res_dinner = models.BooleanField(default=False)
     res_paid = models.BooleanField(default=False)
     res_post_comments = models.CharField(max_length=512)
+
+
+class Session(models.Model):
+    session_id = models.BigAutoField(primary_key=True)
+    session_key = models.BinaryField(max_length=2048)
+    session_nonce = models.BinaryField(max_length=16)

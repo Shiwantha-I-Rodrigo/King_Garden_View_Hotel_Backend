@@ -1,4 +1,10 @@
-import secrets
+import secrets, os, sys, struct, binascii, hashlib, base64
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+
+
+#--diffie-helman--
+
 
 def get_initials():
     prime = int(get_prime(),16)
@@ -6,18 +12,12 @@ def get_initials():
     return prime,base
 
 
-def get_private_key():
-    randbits = secrets.randbits(600)
-    randbits = int(randbits)
-    randbits_str = str(randbits).zfill(600)
-    return randbits_str
-
-
 def calculate_safe_base(prime):
     base = 2 # The smallest safe base is 2
     while not is_safe_generator(base, prime):
         base += 1
     return base
+
 
 def is_safe_generator(base, prime):
     safe_boundary = (prime - 1) // 2
@@ -29,6 +29,7 @@ def is_safe_generator(base, prime):
         return True
     else:
         return False
+
 
 def get_prime():
     plist = [
@@ -84,3 +85,66 @@ def get_prime():
         '0x711fe26c461911009f7a1c1b9c54c6df2274a3030937afe0aca6b85ad0b8618157ee539253e60921f02a5e1f3478aa0fb2f62a4671f506a68cb0d7241b6ddf2005cedd589b44ce87b617c8b9a8e84c47371401843b4a6139c81c65cfe4faa61d7ecc7e014a281c239f674682ca3dd6e4bba6cacaa5b91fe6cfbc9a763148c8ed50c54a6863dffb397e2b6f71e12982fdc0b63bfb255ae407c103ffd786e6fdffe661130b7bd037266a9db488c61ecc1033f5c775ab7d0dd4ca4c2dde670b47702af71d68815e5b9659a1849954df4f09b1d7be7c8fab224587001c1000e41580255e9dcee8000d707540df4b1333baa5ac44c63c3d99fc4e3da1ba0de180cb565a6eeca1ce0fbcd04a951c3bf5ba3b4f2075fea9268c88323e7b111d0f79bf39db490c6afaca0494006e267bb1c178fbc7e828b5565238ea36b2b1f3d875d30cc8000000000000000000000000000000000000000000000000000000000000000000000000000001',
     ]
     return (secrets.choice(plist))
+
+
+def get_private_key():
+    randbits = secrets.randbits(600)
+    randbits = int(randbits)
+    randbits_str = str(randbits).zfill(600)
+    return randbits_str
+
+
+#--chacha20--
+
+
+def chacha20_encrypt(key, nonce, plaintext):
+    plaintext = bytes(plaintext, "utf-8")
+    cipher = Cipher(algorithms.ChaCha20(key, nonce), mode=None, backend=default_backend())
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+    return ciphertext
+
+
+def chacha20_decrypt(key, nonce, ciphertext):
+    cipher = Cipher(algorithms.ChaCha20(key,nonce), mode=None, backend=default_backend())
+    decryptor = cipher.decryptor()
+    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    return plaintext
+
+
+def generate_nonce():
+    nonce = os.urandom(16)
+    return nonce
+
+
+def any_to_byte(any_var,hash_flag):
+    if isinstance(any_var,int):
+        byte_array = any_var.to_bytes((any_var.bit_length()+7)//8,byteorder=sys.byteorder)
+    elif isinstance(any_var,str):
+        byte_array = bytes(any_var,encoding="utf-8")
+    elif isinstance(any_var,float):
+        byte_array = bytearray(struct.pack("d",any_var))
+    else:
+        byte_array = bytearray()
+
+    if hash_flag:
+        hash_object = hashlib.sha256()
+        hash_object.update(byte_array)
+        hash_digest = hash_object.digest()
+        byte_array = hash_digest
+        hash_hex = hash_digest.hex()
+        print(hash_hex)
+
+    return byte_array
+
+
+def byte_to_any(any_byte,type):
+    if type == 'int':
+        out = int.from_bytes(any_byte, byteorder=sys.byteorder)
+    elif type == 'hex':
+        out = binascii.hexlify(any_byte).decode('utf-8')
+    elif type == 'b64':
+        out = base64.b64encode(any_byte).decode('utf-8')
+    else:
+        out = ''
+    return out
