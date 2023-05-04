@@ -117,13 +117,15 @@ def generate_nonce():
     return nonce
 
 
-def any_to_byte(any_var,hash_flag):
-    if isinstance(any_var,int):
-        byte_array = any_var.to_bytes((any_var.bit_length()+7)//8,byteorder=sys.byteorder)
-    elif isinstance(any_var,str):
-        byte_array = bytes(any_var,encoding="utf-8")
-    elif isinstance(any_var,float):
-        byte_array = bytearray(struct.pack("d",any_var))
+def any_to_byte(any_data, type, hash_flag):
+    if type == 'int':
+        byte_array = any_data.to_bytes((any_data.bit_length()+7)//8,byteorder=sys.byteorder)
+    elif type == 'str':
+        byte_array = bytes(any_data,encoding="utf-8")
+    elif type == 'float':
+        byte_array = bytearray(struct.pack("d",any_data))
+    elif type == 'b64':
+        byte_array = base64.b64decode(any_data)
     else:
         byte_array = bytearray()
 
@@ -132,15 +134,17 @@ def any_to_byte(any_var,hash_flag):
         hash_object.update(byte_array)
         hash_digest = hash_object.digest()
         byte_array = hash_digest
-        hash_hex = hash_digest.hex()
-        print(hash_hex)
+        # hash_hex = hash_digest.hex()
+        # print(hash_hex)
 
     return byte_array
 
 
-def byte_to_any(any_byte,type):
+def byte_to_any(any_byte, type):
     if type == 'int':
         out = int.from_bytes(any_byte, byteorder=sys.byteorder)
+    elif type == 'str':
+        out = any_byte.decode('utf-8')
     elif type == 'hex':
         out = binascii.hexlify(any_byte).decode('utf-8')
     elif type == 'b64':
