@@ -1,6 +1,7 @@
-import secrets, os, sys, struct, binascii, hashlib, base64
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+import secrets, os, sys, struct, hashlib, base64
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
 from cryptography.hazmat.backends import default_backend
+from .models import Session
 
 
 #--diffie-helman--
@@ -13,7 +14,7 @@ def get_initials():
 
 
 def calculate_safe_base(prime):
-    base = 2 # The smallest safe base is 2
+    base = 2
     while not is_safe_generator(base, prime):
         base += 1
     return base
@@ -21,7 +22,6 @@ def calculate_safe_base(prime):
 
 def is_safe_generator(base, prime):
     safe_boundary = (prime - 1) // 2
-    # Calculate the order of the base modulo prime
     order = pow(base, safe_boundary, prime)
     if order == 1:
         return False
@@ -98,7 +98,6 @@ def get_private_key():
 
 
 def chacha20_encrypt(key, nonce, plaintext):
-    plaintext = bytes(plaintext, "utf-8")
     cipher = Cipher(algorithms.ChaCha20(key, nonce), mode=None, backend=default_backend())
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(plaintext) + encryptor.finalize()
@@ -112,43 +111,65 @@ def chacha20_decrypt(key, nonce, ciphertext):
     return plaintext
 
 
-def generate_nonce():
-    nonce = os.urandom(16)
-    return nonce
-
-
-def any_to_byte(any_data, type, hash_flag):
+def any_to_byte(any_data, type):
     if type == 'int':
-        byte_array = any_data.to_bytes((any_data.bit_length()+7)//8,byteorder=sys.byteorder)
+        byte_object = int(any_data).to_bytes((any_data.bit_length()+7)//8,byteorder=sys.byteorder)
     elif type == 'str':
-        byte_array = bytes(any_data,encoding="utf-8")
+        byte_object = str(any_data).encode()
     elif type == 'float':
-        byte_array = bytearray(struct.pack("d",any_data))
-    elif type == 'b64':
-        byte_array = base64.b64decode(any_data)
+        byte_object = struct.pack('d',any_data)
+    elif type == 'b64d':
+        byte_object = base64.b64decode(any_data)
+    elif type == 'b64e':
+        byte_object = base64.b64encode(any_data)
     else:
-        byte_array = bytearray()
-
-    if hash_flag:
-        hash_object = hashlib.sha256()
-        hash_object.update(byte_array)
-        hash_digest = hash_object.digest()
-        byte_array = hash_digest
-        # hash_hex = hash_digest.hex()
-        # print(hash_hex)
-
-    return byte_array
+        byte_object = bytes()
+    return byte_object
 
 
 def byte_to_any(any_byte, type):
     if type == 'int':
         out = int.from_bytes(any_byte, byteorder=sys.byteorder)
     elif type == 'str':
-        out = any_byte.decode('utf-8')
-    elif type == 'hex':
-        out = binascii.hexlify(any_byte).decode('utf-8')
-    elif type == 'b64':
-        out = base64.b64encode(any_byte).decode('utf-8')
+        out = bytes(any_byte).decode()
+    elif type == 'float':
+        out = struct.unpack('f',any_byte)
+        out = out[0]
     else:
         out = ''
     return out
+
+
+def byte_to_hash(byte_object):
+    hash_object = hashlib.sha256()
+    hash_object.update(byte_object)
+    hash_digest = hash_object.digest()
+    # hash_hex = hash_digest.hex()
+    return hash_digest
+
+
+def generate_nonce():
+    nonce = os.urandom(16)
+    return nonce
+
+
+def decrypt(request):
+    session = Session.objects.get(session_id = request.data['session_id'])
+    key_bytes = any_to_byte(session.session_key,'b64d')
+    nonce_bytes = any_to_byte(session.session_nonce,'b64d')
+    cipher_text_b64 = any_to_byte(request.data['res'],'str')
+    cipher_text_bytes = any_to_byte(cipher_text_b64,'b64d')
+    plain_text_bytes = chacha20_decrypt(key_bytes,nonce_bytes,cipher_text_bytes)
+    plain_text = byte_to_any(plain_text_bytes,'str')
+    return plain_text
+
+
+def encrypt(request,plain_text):
+    session = Session.objects.get(session_id = request.data['session_id'])
+    key_bytes = any_to_byte(session.session_key,'b64d')
+    nonce_bytes = any_to_byte(session.session_nonce,'b64d')
+    text_bytes = any_to_byte(plain_text,'str')
+    cypher_text_bytes = chacha20_encrypt(key_bytes,nonce_bytes,text_bytes)
+    cypher_text_b64 = any_to_byte(cypher_text_bytes,'b64e')
+    cypher_text = byte_to_any(cypher_text_b64,'str')
+    return cypher_text
