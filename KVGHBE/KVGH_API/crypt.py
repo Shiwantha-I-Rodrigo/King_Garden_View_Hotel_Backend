@@ -87,10 +87,10 @@ def get_prime():
     return (secrets.choice(plist))
 
 
-def get_private_key():
-    randbits = secrets.randbits(600)
+def generate_str(size):
+    randbits = secrets.randbits(size)
     randbits = int(randbits)
-    randbits_str = str(randbits).zfill(600)
+    randbits_str = str(randbits).zfill(size)
     return randbits_str
 
 
@@ -148,11 +148,6 @@ def byte_to_hash(byte_object):
     return hash_digest
 
 
-def generate_nonce():
-    nonce = os.urandom(16)
-    return nonce
-
-
 def decrypt(request):
     session = Session.objects.get(session_id = request.data['session_id'])
     key_bytes = any_to_byte(session.session_key,'b64d')
@@ -173,3 +168,19 @@ def encrypt(request,plain_text):
     cypher_text_b64 = any_to_byte(cypher_text_bytes,'b64e')
     cypher_text = byte_to_any(cypher_text_b64,'str')
     return cypher_text
+
+
+def generate_bits(size):
+    nonce = os.urandom(size)
+    return nonce
+
+
+#--User Authorizations--
+
+
+def authenticate():
+    return 0
+
+
+def authorize():
+    return 0

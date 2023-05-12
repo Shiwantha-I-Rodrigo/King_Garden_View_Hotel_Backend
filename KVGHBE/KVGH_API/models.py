@@ -100,3 +100,5 @@ class Session(models.Model):
     session_id = models.BigAutoField(primary_key=True)
     session_key = models.BinaryField(max_length=2048)
     session_nonce = models.BinaryField(max_length=16)
+    session_auth = models.DecimalField(max_digits=1, decimal_places=0)
+    session_exp = models.DateField()
