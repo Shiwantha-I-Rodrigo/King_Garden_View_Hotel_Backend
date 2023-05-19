@@ -1,7 +1,11 @@
 import secrets, os, sys, struct, hashlib, base64
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
-from .models import Session
+from cryptography.hazmat.primitives import padding, hashes
+from cryptography.hazmat.backends import default_backend
+from .models import Session, User
+from datetime import date, timedelta
 
 
 #--diffie-helman--
@@ -12,13 +16,11 @@ def get_initials():
     base = calculate_safe_base(prime)
     return prime,base
 
-
 def calculate_safe_base(prime):
     base = 2
     while not is_safe_generator(base, prime):
         base += 1
     return base
-
 
 def is_safe_generator(base, prime):
     safe_boundary = (prime - 1) // 2
@@ -30,6 +32,11 @@ def is_safe_generator(base, prime):
     else:
         return False
 
+def generate_str(size):
+    randbits = secrets.randbits(size)
+    randbits = int(randbits)
+    randbits_str = str(randbits).zfill(size)
+    return randbits_str
 
 def get_prime():
     plist = [
@@ -87,28 +94,100 @@ def get_prime():
     return (secrets.choice(plist))
 
 
-def generate_str(size):
-    randbits = secrets.randbits(size)
-    randbits = int(randbits)
-    randbits_str = str(randbits).zfill(size)
-    return randbits_str
+#--User Authorizations--
 
 
-#--chacha20--
+def authenticate(auth_data):
+    try:
+        client_pass_hash_b64 = auth_data['user_pass']
+        client_pass_hash = any_to_byte(client_pass_hash_b64,'b64d')
+        user = User.objects.get(user_name=auth_data['user_name'])
+        user_pass_hash_hash_b64 = user.user_pass[16:]
+        user_pass_hash_hash = any_to_byte(user_pass_hash_hash_b64,'b64d')
+        user_pass_salt_b64 = user.user_pass[:16]
+        user_pass_salt = any_to_byte(user_pass_salt_b64,'b64d')
+        client_pass_hash_hash = byte_to_hash(user_pass_salt+client_pass_hash)
+
+        if user_pass_hash_hash == client_pass_hash_hash:
+            key_bytes = generate_bytes(256)
+            salt_bytes = generate_bytes(16)
+            aes_key_bytes = convert_string_to_aes_key(key_bytes,salt_bytes)
+            aes_key_b64 = any_to_byte(aes_key_bytes,'b64e')
+            data = {"session_key":aes_key_b64,
+                    "session_auth":user.user_role,
+                    "user":user,
+                    "session_exp":date.today + timedelta(days=1)}
+            session = Session(**data)
+            session.save()
+            return True , session.session_id , aes_key_b64
+        else:
+            False , 0 , 0
+    except:
+        return False , 0 , 0
 
 
-def chacha20_encrypt(key, nonce, plaintext):
-    cipher = Cipher(algorithms.ChaCha20(key, nonce), mode=None, backend=default_backend())
+def auth_levels(auth_level):
+    read_own = True if auth_level // 64 > 0 else False
+    auth_level -= 64 if auth_level >= 64 else 0
+    create_own = True if auth_level // 32 > 0 else False
+    auth_level -= 32 if auth_level >= 32 else 0
+    update_own = True if auth_level // 16 > 0 else False
+    auth_level -= 16 if auth_level >= 16 else 0
+    read_all = True if auth_level // 8 > 0 else False
+    auth_level -= 8 if auth_level >= 8 else 0
+    create_all = True if auth_level // 4 > 0 else False
+    auth_level -= 4 if auth_level >= 4 else 0
+    update_all = True if auth_level // 2 > 0 else False
+    auth_level -= 2 if auth_level >= 2 else 0
+    delete_all = True if auth_level // 1 > 0 else False
+    return read_own, create_own, update_own, read_all, create_all, update_all, delete_all
+
+
+def auth_calculate(ro,co,uo,ra,ca,ua,da,proposed):
+    ro2,co2,uo2,ra2,ca2,ua2,da2 = auth_levels(proposed)
+    available_list = [ro,co,uo,ra,ca,ua,da]
+    proposed_list = [ro2,co2,uo2,ra2,ca2,ua2,da2]
+    for i in range(len(available_list)):
+        diff = available_list[i] - proposed_list[i]
+        if diff < 0:
+            return 112
+    return proposed
+
+
+#--AES Cryptography--
+
+
+def convert_string_to_aes_key(password, salt):
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    key = kdf.derive(password)
+    return key
+
+def encrypt_string_with_aes_key(key, plaintext):
+    iv = os.urandom(16)
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     encryptor = cipher.encryptor()
-    ciphertext = encryptor.update(plaintext) + encryptor.finalize()
-    return ciphertext
+    padder = padding.PKCS7(128).padder()
+    padded_plaintext = padder.update(plaintext.encode()) + padder.finalize()
+    ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
+    return iv + ciphertext
 
-
-def chacha20_decrypt(key, nonce, ciphertext):
-    cipher = Cipher(algorithms.ChaCha20(key,nonce), mode=None, backend=default_backend())
+def decrypt_string_with_aes_key(key, ciphertext):
+    iv = ciphertext[:16]
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     decryptor = cipher.decryptor()
-    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-    return plaintext
+    decrypted_padded = decryptor.update(ciphertext[16:]) + decryptor.finalize()
+    unpadder = padding.PKCS7(128).unpadder()
+    decrypted_plaintext = unpadder.update(decrypted_padded) + unpadder.finalize()
+    return decrypted_plaintext.decode()
+
+
+#--common--
 
 
 def any_to_byte(any_data, type):
@@ -126,7 +205,6 @@ def any_to_byte(any_data, type):
         byte_object = bytes()
     return byte_object
 
-
 def byte_to_any(any_byte, type):
     if type == 'int':
         out = int.from_bytes(any_byte, byteorder=sys.byteorder)
@@ -139,48 +217,28 @@ def byte_to_any(any_byte, type):
         out = ''
     return out
 
-
 def byte_to_hash(byte_object):
     hash_object = hashlib.sha256()
     hash_object.update(byte_object)
     hash_digest = hash_object.digest()
-    # hash_hex = hash_digest.hex()
     return hash_digest
 
+def generate_bytes(size):
+    nonce = os.urandom(size)
+    return nonce
 
 def decrypt(request):
     session = Session.objects.get(session_id = request.data['session_id'])
     key_bytes = any_to_byte(session.session_key,'b64d')
-    nonce_bytes = any_to_byte(session.session_nonce,'b64d')
-    cipher_text_b64 = any_to_byte(request.data['res'],'str')
+    cipher_text_b64 = any_to_byte(request.data['req'],'str')
     cipher_text_bytes = any_to_byte(cipher_text_b64,'b64d')
-    plain_text_bytes = chacha20_decrypt(key_bytes,nonce_bytes,cipher_text_bytes)
-    plain_text = byte_to_any(plain_text_bytes,'str')
-    return plain_text
-
+    plain_text = decrypt_string_with_aes_key(key_bytes,cipher_text_bytes)
+    return plain_text, session.session_auth, session.user.user_name
 
 def encrypt(request,plain_text):
     session = Session.objects.get(session_id = request.data['session_id'])
     key_bytes = any_to_byte(session.session_key,'b64d')
-    nonce_bytes = any_to_byte(session.session_nonce,'b64d')
-    text_bytes = any_to_byte(plain_text,'str')
-    cypher_text_bytes = chacha20_encrypt(key_bytes,nonce_bytes,text_bytes)
+    cypher_text_bytes = encrypt_string_with_aes_key(key_bytes,plain_text)
     cypher_text_b64 = any_to_byte(cypher_text_bytes,'b64e')
     cypher_text = byte_to_any(cypher_text_b64,'str')
     return cypher_text
-
-
-def generate_bits(size):
-    nonce = os.urandom(size)
-    return nonce
-
-
-#--User Authorizations--
-
-
-def authenticate():
-    return 0
-
-
-def authorize():
-    return 0

@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
+# to reset migrations delete db and migrations folder
+# force makemigrations with manage.py makemigrations APPNAME
 
 
 class Hotel(models.Model):
@@ -14,7 +16,6 @@ class Hotel(models.Model):
 
 class Room_Type(models.Model):
     type_id = models.BigAutoField(primary_key=True)
-    hotel_id = models.ForeignKey(Hotel, on_delete=models.PROTECT)
     type_name = models.CharField(max_length=128)
     type_price = models.DecimalField(max_digits=8, decimal_places=2)
     type_single_beds = models.PositiveSmallIntegerField()
@@ -24,20 +25,15 @@ class Room_Type(models.Model):
     type_wifi = models.BooleanField(default=False)
     type_hotwater = models.BooleanField(default=False)
     type_max_guests = models.PositiveSmallIntegerField()
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT)
 
 
 class Room(models.Model):
     room_id = models.BigAutoField(primary_key=True)
-    type_id = models.ForeignKey(Room_Type, on_delete=models.PROTECT)
-    hotel_id = models.ForeignKey(Hotel, on_delete=models.PROTECT)
     room_number = models.CharField(max_length=8)
     room_status = models.BooleanField(default=False)
-
-
-class User_Role(models.Model):
-    role_id = models.BigAutoField(primary_key=True)
-    role_name = models.CharField(max_length=128)
-    role_token = models.CharField(max_length=256)
+    room_type = models.ForeignKey(Room_Type, on_delete=models.PROTECT)
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT)
 
 
 class User(models.Model):
@@ -47,7 +43,7 @@ class User(models.Model):
     ]
     phone_regex = RegexValidator(regex='^\+?1?\d{9,15}$', message="invalid phone number")
     user_name = models.CharField(max_length=128, primary_key=True)
-    role_id = models.ForeignKey(User_Role, on_delete=models.PROTECT)
+    user_role = models.DecimalField(max_digits=3, decimal_places=0)
     user_pass = models.BinaryField()
     user_first_name = models.CharField(max_length=128)
     user_last_name = models.CharField(max_length=128)
@@ -56,7 +52,7 @@ class User(models.Model):
     user_address = models.CharField(max_length=256)
     user_telephone = models.CharField(max_length=15, validators=[phone_regex], blank=True)
     user_email = models.EmailField()
-    user_discount = models.DecimalField(max_digits=2, decimal_places=2)
+    user_discount = models.DecimalField(max_digits=3, decimal_places=1)
 
 
 class Customer(models.Model):
@@ -73,13 +69,11 @@ class Customer(models.Model):
     customer_address = models.CharField(max_length=256)
     customer_telephone = models.CharField(max_length=15, validators=[phone_regex], blank=True)
     customer_email = models.EmailField()
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
 
 
 class Reservation(models.Model):
     res_id = models.BigAutoField(primary_key=True)
-    customer_id = models.ForeignKey(Customer, on_delete=models.PROTECT)
-    user_name = models.ForeignKey(User, on_delete=models.PROTECT)
-    room_id = models.ForeignKey(Room, on_delete=models.PROTECT)
     res_date = models.DateTimeField(auto_now_add=True)
     res_mod_date = models.DateTimeField(auto_now=True)
     res_check_in = models.DateTimeField()
@@ -87,18 +81,21 @@ class Reservation(models.Model):
     res_adults = models.DecimalField(max_digits=2, decimal_places=0)
     res_children = models.DecimalField(max_digits=2, decimal_places=0)
     res_special_req = models.CharField(max_length=512)
-    res_discount = models.DecimalField(max_digits=2, decimal_places=2)
+    res_discount = models.DecimalField(max_digits=3, decimal_places=1)
     res_price = models.DecimalField(max_digits=8, decimal_places=2)
     res_breakfast = models.BooleanField(default=False)
     res_lunch = models.BooleanField(default=False)
     res_dinner = models.BooleanField(default=False)
     res_paid = models.BooleanField(default=False)
     res_post_comments = models.CharField(max_length=512)
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
+    room = models.ForeignKey(Room, on_delete=models.PROTECT)
 
 
 class Session(models.Model):
     session_id = models.BigAutoField(primary_key=True)
     session_key = models.BinaryField(max_length=2048)
-    session_nonce = models.BinaryField(max_length=16)
-    session_auth = models.DecimalField(max_digits=1, decimal_places=0)
+    session_auth = models.DecimalField(max_digits=3, decimal_places=0)
     session_exp = models.DateField()
+    user = models.ForeignKey(User, on_delete=models.PROTECT)

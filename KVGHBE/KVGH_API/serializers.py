@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hotel, Room_Type, Room, User_Role, User, Customer, Reservation, Session
+from .models import Hotel, Room_Type, Room, User, Customer, Reservation, Session
 
 
 class Hotel_Serializer(serializers.ModelSerializer):
@@ -13,11 +13,10 @@ class Hotel_Serializer(serializers.ModelSerializer):
 
 
 class Room_Type_Serializer(serializers.ModelSerializer):
-    #hotel_id = Hotel_Serializer()
+    #hotel = Hotel_Serializer()
     class Meta:
         model = Room_Type
         fields = ('type_id', 
-                  'hotel_id'
                   'type_name', 
                   'type_price', 
                   'type_single_beds', 
@@ -26,35 +25,27 @@ class Room_Type_Serializer(serializers.ModelSerializer):
                   'type_child_beds', 
                   'type_wifi', 
                   'type_hotwater', 
-                  'type_max_guests')
+                  'type_max_guests'
+                  'hotel')
 
 
 class Room_Serializer(serializers.ModelSerializer):
-    #hotel_id = Hotel_Serializer()
-    #type_id = Room_Type_Serializer()
+    #hotel = Hotel_Serializer()
+    #room_type = Room_Type_Serializer()
     class Meta:
         model = Room
-        fields = ('room_id', 
-                  'type_id' 
-                  'hotel_id', 
+        fields = ('room_id',
                   'room_number', 
-                  'room_status',)
-
-
-class User_Role_Serializer(serializers.ModelSerializer):
-    class Meta:
-        model = User_Role
-        fields = ('role_id', 
-                  'role_name', 
-                  'role_token',) 
+                  'room_status',
+                  'room_type' 
+                  'hotel', )
 
 
 class User_Serializer(serializers.ModelSerializer):
-    #role_id = User_Role_Serializer()
     class Meta:
         model = User
         fields = ('user_name', 
-                  'role_id', 
+                  'user_role', 
                   'user_pass', 
                   'user_first_name', 
                   'user_last_name', 
@@ -67,28 +58,27 @@ class User_Serializer(serializers.ModelSerializer):
 
 
 class Customer_Serializer(serializers.ModelSerializer):
+    #user = User_Serializer()
     class Meta:
         model = Customer
-        fields = ('customer_id', 
+        fields = ('customer_id',
                   'customer_first_name'
                   'customer_last_name', 
                   'customer_dob', 
                   'customer_gender', 
                   'customer_address', 
                   'customer_telephone', 
-                  'customer_email',)
+                  'customer_email',
+                  'user',)
 
 
 class Reservation_Serializer(serializers.ModelSerializer):
-    #user_name = User_Serializer()
-    #room_id = Room_Serializer()
-    #customer_id = Customer_Serializer()
+    #user = User_Serializer()
+    #room = Room_Serializer()
+    #customer = Customer_Serializer()
     class Meta:
         model = Reservation
         fields = ('res_id', 
-                  'customer_id'
-                  'user_name', 
-                  'room_id', 
                   'res_date', 
                   'res_mod_date', 
                   'res_check_in', 
@@ -101,12 +91,19 @@ class Reservation_Serializer(serializers.ModelSerializer):
                   'res_breakfast', 
                   'res_lunch', 
                   'res_dinner', 
-                  'res_paid',)
+                  'res_paid',
+                  'res_post_comments',
+                  'customer'
+                  'user', 
+                  'room', )
 
 
 class Session_Serializer(serializers.ModelSerializer):
+    #user = User_Serializer()
     class Meta:
         model = Session
         fields = ('session_id', 
                   'session_key', 
-                  'session_nonce',) 
+                  'session_auth',
+                  'session_exp',
+                  'user',) 
